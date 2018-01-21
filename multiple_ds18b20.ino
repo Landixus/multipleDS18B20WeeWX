@@ -128,14 +128,15 @@ void loop() {
   Serial.print( host );
   Serial.println( route );
 
-char temperatureString[6];
+//char temperatureString[6];
+char tempC[6];
      for(int i=0;i<numberOfDevices;i++)
 {
-    dtostrf(tempDev[i], 2, 2, temperatureString);
+    dtostrf(tempDev[i], 2, 2, tempC);
 
 }
   char buf[256];
-  sprintf(buf, "%s&%s", temperatureString);
+  sprintf(buf, "%s", tempC);
   //sprintf(buf, str_temp, str_humid, str_press);
   Serial.print( buf );
   Serial.println( " " );
@@ -144,7 +145,8 @@ char temperatureString[6];
 
   Serial.print ("Status received: " );
   Serial.println( statusCode );
-  
+  long t = millis();
+  TempLoop( t );
   Serial.println( "Waiting 30 seconds" );
   delay(30000);  
   }
