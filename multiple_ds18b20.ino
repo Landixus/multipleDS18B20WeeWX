@@ -131,12 +131,13 @@ void loop() {
 //char temperatureString[6];
 char tempC[6];
      for(int i=0;i<numberOfDevices;i++)
-{
-    dtostrf(tempDev[i], 2, 2, tempC);
 
+{
+    dtostrf(tempDev[i], 2, 2, tempC); 
+    Serial.print( tempDev[i] );
 }
   char buf[256];
-  sprintf(buf, "%s", tempC);
+  sprintf(buf, " ", tempC);  //%s
   //sprintf(buf, str_temp, str_humid, str_press);
   Serial.print( buf );
   Serial.println( " " );
