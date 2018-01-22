@@ -1,14 +1,10 @@
-#include <stdint.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <WiFiClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <WiFiRestClient.h>
 
-#define USE_SERIAL Serial
 
-//Global sensor object
-const char* host = "192.168.0.39";
-const char* route = "/ground.php?";
 //------------------------------------------
 //DS18B20
 #define ONE_WIRE_BUS D3 //Pin to which is attached a temperature sensor
@@ -25,9 +21,14 @@ const int durationTemp = 5000; //The frequency of temperature measurement
 
 //------------------------------------------
 //WIFI
-const char* ssid = "DeineMudda";
-const char* password = "52523124602348832660";
+const char* ssid = "YOUR_SSID";
+const char* password = "YOUR_PASSWORD";
 
+//------------------------------------------
+//HTTP
+ESP8266WebServer server(80);
+
+//------------------------------------------
 //Convert device id to String
 String GetAddressToString(DeviceAddress deviceAddress){
   String str = "";
@@ -89,12 +90,58 @@ void TempLoop(long now){
     for(int i=0; i<numberOfDevices; i++){
       float tempC = DS18B20.getTempC( devAddr[i] ); //Measuring temperature in Celsius
       tempDev[i] = tempC; //Save the measured value to the array
+  //    Serial.print("TestValues:" );
+  //    Serial.println(tempC);
     }
     DS18B20.setWaitForConversion(false); //No waiting for measurement
     DS18B20.requestTemperatures(); //Initiate the temperature measurement
     lastTemp = millis();  //Remember the last time measurement
   }
 }
+
+//------------------------------------------
+void HandleRoot(){
+  String message = " ";
+//  message += numberOfDevices;
+//  message += "\r\n<br>";
+  char temperatureString[6];
+
+//  message += "<table border='1'>\r\n";
+//  message += "<tr><td>Device id</td><td>Temperature</td></tr>\r\n";
+  for(int i=0;i<numberOfDevices;i++){
+    dtostrf(tempDev[i], 2, 2, temperatureString);
+    Serial.print( "Sending temperature: " );
+    Serial.println( temperatureString );
+
+//    message += "<tr><td>";
+//    message += GetAddressToString( devAddr[i] );
+//    message += "</td>\r\n";
+//    message += "<td>";
+    message += temperatureString;
+ //   message += "</td></tr>\r\n";
+    //message += "\r\n";
+    message += ",";
+  }
+ // message += "</table>\r\n";
+  
+  server.send(200, "text/html", message );
+}
+
+void HandleNotFound(){
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i=0; i<server.args(); i++){
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/html", message);
+}
+
 
 //------------------------------------------
 void setup() {
@@ -116,38 +163,19 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  server.on("/", HandleRoot);
+  server.onNotFound( HandleNotFound );
+  server.begin();
+  Serial.println("HTTP server started at ip " + WiFi.localIP().toString() );
+
   //Setup DS18b20 temperature sensor
   SetupDS18B20();
-  delay(1000);
+
 }
+
 void loop() {
-    Serial.println();
-  WiFiRestClient restClient( host );
-
-  Serial.print( "Posting to http://" );
-  Serial.print( host );
-  Serial.println( route );
-
-//char temperatureString[6];
-char tempC[6];
-     for(int i=0;i<numberOfDevices;i++)
-
-{
-    dtostrf(tempDev[i], 2, 2, tempC); 
-    Serial.print( tempDev[i] );
-}
-  char buf[256];
-  sprintf(buf, " ", tempC);  //%s
-  //sprintf(buf, str_temp, str_humid, str_press);
-  Serial.print( buf );
-  Serial.println( " " );
-  
-  int statusCode = restClient.post( route, buf);  //buf
-
-  Serial.print ("Status received: " );
-  Serial.println( statusCode );
   long t = millis();
+  
+  server.handleClient();
   TempLoop( t );
-  Serial.println( "Waiting 30 seconds" );
-  delay(30000);  
-  }
+}
