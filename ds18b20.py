@@ -9,11 +9,11 @@ class ds18b20(StdService):
     def __init__(self, engine, config_dict):
         super(ds18b20, self).__init__(engine, config_dict)
         d = config_dict.get('PondService', {})
-        url = "http://192.168.0.70"
+        url = "http://192.168.0.70" # insert your Nodemcu server url or the ip address
         page = urllib2.urlopen(url)
         html_content = page.read()
         rendered_content = html2text.html2text(html_content)
-        file = open('/home/weewx/public_html/data/ds18b20.txt', 'w')
+        file = open('/home/weewx/public_html/data/ds18b20.txt', 'w') #create ds18b20.txt before use
         file.write(rendered_content)
         file.close()
         self.filename = d.get('filename', '/home/weewx/public_html/data/ds18b20.txt')
