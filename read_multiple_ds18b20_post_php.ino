@@ -4,12 +4,14 @@
 #include <WiFiRestClient.h>
 
 #define ONE_WIRE_BUS D3 // DS18B20 on arduino pin4 corresponds to D3 on physical board
+#define SLEEP_LENGTH 300
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature DS18B20(&oneWire);
 
 float temp_0;
 float temp_1;
+float temp_2;
 
 /* WiFi credentials */
 const char* host = "192.168.0.39";
@@ -21,43 +23,40 @@ char strTD[6];
 
 void setup() 
 {
+  {
   Serial.begin(115200);
   DS18B20.begin();
   Serial.println(" ");
   Serial.println("Testing Dual Sensor data");
-}
 
-void loop() 
-{
-  getSendData();
-}
-
-/***************************************************
- * Send Sensor data to Server
- **************************************************/
-void getSendData()
-{
   DS18B20.requestTemperatures(); 
-  temp_0 = DS18B20.getTempCByIndex(0); // Sensor 0 will capture Temp in Celcius
-  temp_1 = DS18B20.getTempCByIndex(1); // Sensor 0 will capture Temp in Fahrenheit
-
-//neu
+  temp_0 = DS18B20.getTempCByIndex(0); // Sensor will capture Temp in Celcius
+  temp_1 = DS18B20.getTempCByIndex(1); 
+  temp_2 = DS18B20.getTempCByIndex(2);
   delay(5000);
 
-if (WiFi.status() != WL_CONNECTED) {
+/////
+ Serial.print("Connecting to ");
+ Serial.println(ssid);
+
 WiFi.begin(ssid, pass);
-delay(100);
-}
-if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-return;
-}
+delay(1000);
+Serial.print(".");
 
-if (WiFi.status() == WL_CONNECTED)
-{
-}
 
-  Serial.println(" %");
-  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+
+  Serial.println("");
+  Serial.println("WiFi connected");  
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+delay(1000);
+
   Serial.println();
   WiFiRestClient restClient( host );
 
@@ -67,18 +66,18 @@ if (WiFi.status() == WL_CONNECTED)
   //ende neu
   
   // Create some strings
-char temp0Stg[10];
-char temp1Stg[10];
+  char temp0Stg[10];
+  char temp1Stg[10];
+  char temp2Stg[10];
 
 // Convert the floats to strings
-dtostrf(temp_0, 5, 2, temp0Stg);
-dtostrf(temp_1, 5, 2, temp1Stg);
+  dtostrf(temp_0, 5, 2, temp0Stg);
+  dtostrf(temp_1, 5, 2, temp1Stg);
+  dtostrf(temp_2, 5, 2, temp2Stg);
 
-char postStg[80]; 
-
+  char postStg[80]; 
   char buf[256];
-  //sprintf(postStg, "temp_pond=%s&temp_pool=%s", temp0Stg, temp1Stg);
-  sprintf(buf, "temp_pond=%s&temp_pool=%s", temp0Stg, temp1Stg);  //buf 
+  sprintf(buf, "%s,%s,%s", temp0Stg, temp1Stg, temp2Stg);  //buf 
   Serial.print( buf );
   Serial.println( " " );
   
@@ -87,5 +86,16 @@ char postStg[80];
   Serial.print ("Status received: " );
   Serial.println( statusCode );
   
-  Serial.println( "Waiting 30 seconds" );
-  delay(30000);
+}
+  
+
+  Serial.println("Going into deep sleep for 5 Minutes");
+  delay(100);
+  ESP.deepSleep(SLEEP_LENGTH * 1000000,WAKE_RF_DEFAULT); //5 minutes
+
+}
+
+void loop() 
+{
+
+}
